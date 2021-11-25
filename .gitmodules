@@ -1,6 +1,0 @@
-[submodule "core"]
-	path = core
-	url = https://github.com/DasBabyPixel/labyrinth/core
-[submodule "lwjgl"]
-	path = lwjgl
-	url = https://github.com/DasBabyPixel/labyrinth/lwjgl
