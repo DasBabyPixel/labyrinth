@@ -1,9 +1,0 @@
-[submodule "core"]
-	path = core
-	url = https://github.com/DasBabyPixel/labyrinth.git
-[submodule "lwjgl"]
-	path = lwjgl
-	url = https://github.com/DasBabyPixel/labyrinth.git
-[submodule "android"]
-	path = android
-	url = https://github.com/DasBabyPixel/labyrinth.git
