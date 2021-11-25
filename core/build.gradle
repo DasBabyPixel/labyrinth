@@ -1,0 +1,13 @@
+plugins {
+	id 'application'
+}
+
+jar {
+	manifest {
+		attributes 'Main-Class': 'labyrinth.Main'
+	}
+}
+
+application {
+	mainClass = 'labyrinth.Main'
+}
