@@ -2,8 +2,6 @@ allprojects {
 
 	apply plugin: 'eclipse'
 
-	// comment
-
 	def major = 1, minor = 0, patch = 1, versionType = "SNAPSHOT"
 
 	group 'de.dasbabypixel.labyrinth'
@@ -17,6 +15,7 @@ allprojects {
 subprojects {
 
 	apply plugin: 'java'
+	
 	eclipse {
 		classpath {
 			defaultOutputDir = file('build/eclipse')
@@ -32,6 +31,16 @@ subprojects {
 		}
 	}
 
+	sourceSets.remove(sourceSets.test)
+	sourceSets.each { set ->
+		set.java.srcDirs.each {
+			dir -> mkdir dir
+		}
+		set.resources.srcDirs.each {
+			dir -> mkdir dir
+		}
+	}
+	
 	compileJava {
 		options.encoding = 'UTF-8'
   		sourceCompatibility = '1.8'
