@@ -21,6 +21,20 @@ switch (OperatingSystem.current()) {
 		break
 }
 
+apply plugin: 'application'
+
+def theMainClass = 'de.dasbabypixel.labyrinth.lwjgl.Main'
+
+jar {
+	manifest {
+		attributes 'Main-Class': theMainClass
+	}
+}
+
+application {
+	mainClass = theMainClass
+}
+
 repositories {
 	mavenCentral()
 }
