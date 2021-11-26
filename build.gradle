@@ -25,6 +25,16 @@ subprojects {
 	eclipse {
 		classpath {
 			defaultOutputDir = file('build/eclipse')
+			file {
+				whenMerged {
+					entries.each { e ->
+						if(e.kind == 'src' && e.toString().contains('output')) {
+							e.output = null
+						}
+					}
+					//entries.find { it.path == 'src/main/resources' }.output = null
+				}
+			}
 		}
 	}
 
