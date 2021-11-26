@@ -8,6 +8,6 @@ public class Main {
 		System.out.println(Main.class.getClassLoader().getResourceAsStream("res1"));
 		System.out.println("eeeeee");
 		
-		
+		System.out.println("RIIIEESIGE ÄNDERUNG");
 	}
 }
