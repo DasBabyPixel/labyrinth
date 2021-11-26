@@ -1,7 +1,6 @@
 allprojects {
 
 	apply plugin: 'eclipse'
-	apply plugin: 'visual-studio'
 
 	// comment
 
