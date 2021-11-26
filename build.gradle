@@ -10,13 +10,6 @@ allprojects {
 	repositories {
 		mavenCentral()
 	}
-
-	project.ext {
-		labyrinthCoreName = 'labyrinth-core'
-		labyrinthLWJGLName = 'labyrinth-lwjgl'
-		labyrinthAndroidName = 'labyrinth-android'
-	}
-	
 }
 
 subprojects {
