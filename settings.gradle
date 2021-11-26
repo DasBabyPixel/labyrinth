@@ -2,3 +2,7 @@ rootProject.name = 'labyrinth-root'
 
 include 'core'
 findProject(':core')?.name = 'labyrinth-core'
+include 'lwjgl'
+findProject(':lwjgl')?.name = 'labyrinth-lwjgl'
+include 'android'
+findProject(':android')?.name = 'labyrinth-android'
