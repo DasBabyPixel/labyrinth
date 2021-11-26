@@ -1,6 +1,7 @@
 allprojects {
 
 	apply plugin: 'eclipse'
+	apply plugin: 'visual-studio'
 
 	def major = 1, minor = 0, patch = 1, versionType = "SNAPSHOT"
 
