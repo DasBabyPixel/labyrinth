@@ -3,6 +3,8 @@ allprojects {
 	apply plugin: 'eclipse'
 	apply plugin: 'visual-studio'
 
+	// comment
+
 	def major = 1, minor = 0, patch = 1, versionType = "SNAPSHOT"
 
 	group 'de.dasbabypixel.labyrinth'
