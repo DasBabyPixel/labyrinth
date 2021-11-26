@@ -24,8 +24,8 @@ hs_err_pid*
 
 # eclipse
 *.project
-.settings
-.classpath
+*.settings
+*.classpath
 bin
 
 # Ignore Gradle project-specific cache directory
