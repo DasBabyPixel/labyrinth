@@ -1,4 +1,4 @@
-package labyrinth;
+package de.dasbabypixel.labyrinth.core;
 
 public class Main {
 

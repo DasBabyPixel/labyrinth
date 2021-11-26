@@ -2,12 +2,14 @@ plugins {
 	id 'application'
 }
 
+def theMain = 'de.dasbabypixel.labyrinth.core.Main'
+
 jar {
 	manifest {
-		attributes 'Main-Class': 'labyrinth.Main'
+		attributes 'Main-Class': theMain
 	}
 }
 
 application {
-	mainClass = 'labyrinth.Main'
+	mainClass = theMain
 }
