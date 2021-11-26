@@ -23,7 +23,9 @@ subprojects {
 
 	apply plugin: 'java'
 	eclipse {
-		
+		classpath {
+			defaultOutputDir = file('build/eclipse')
+		}
 	}
 
 	compileJava {
