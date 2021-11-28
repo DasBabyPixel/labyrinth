@@ -1,7 +1,9 @@
 package de.dasbabypixel.labyrinth.lwjgl.glfw;
 
 import static org.lwjgl.glfw.GLFW.*;
+import static org.lwjgl.opengl.GL11.*;
 
+import java.io.IOException;
 import java.util.Collection;
 import java.util.Deque;
 import java.util.Queue;
@@ -25,11 +27,15 @@ import org.lwjgl.glfw.GLFWWindowSizeCallbackI;
 import org.lwjgl.opengl.GL;
 import org.lwjgl.opengl.GL11;
 
+import de.dasbabypixel.labyrinth.lwjgl.render.Texture;
+import de.dasbabypixel.labyrinth.lwjgl.resource.ResourcePath;
+
 public class GLFWAsyncWindow {
 
 	private final AtomicLong windowId = new AtomicLong();
 	private final AtomicBoolean shouldClose = new AtomicBoolean(false);
 	private final AtomicBoolean visible = new AtomicBoolean(false);
+	private final AtomicInteger borderTop = new AtomicInteger(40);
 	private final AtomicInteger border = new AtomicInteger(10);
 	private final AtomicInteger width = new AtomicInteger(500);
 	private final AtomicInteger height = new AtomicInteger(500);
@@ -41,6 +47,7 @@ public class GLFWAsyncWindow {
 	private final AtomicReference<Double> mousey = new AtomicReference<>(0D);
 	private final AtomicReference<Float> xscale = new AtomicReference<>(1F);
 	private final AtomicReference<Float> yscale = new AtomicReference<>(1F);
+	private final AtomicReference<Renderer> renderer = new AtomicReference<>(null);
 	private final AtomicReference<WindowThread> windowThread = new AtomicReference<>();
 	private final Collection<FramebufferSizeListener> framebufferSizeListeners = ConcurrentHashMap.newKeySet();
 
@@ -57,6 +64,10 @@ public class GLFWAsyncWindow {
 
 	public void removeListener(Listener listener) {
 		framebufferSizeListeners.remove(listener);
+	}
+
+	public void setRenderer(Renderer renderer) {
+		this.renderer.set(renderer);
 	}
 
 	public void setPosition(int x, int y) {
@@ -106,6 +117,16 @@ public class GLFWAsyncWindow {
 		return shouldClose.get();
 	}
 
+	private void updateRenderer() {
+		Renderer r = renderer.get();
+		if (r != null) {
+			r.x.set(border.get());
+			r.y.set(borderTop.get());
+			r.w.set(framebufferWidth.get());
+			r.h.set(framebufferHeight.get());
+		}
+	}
+
 	private class RenderThread extends Thread {
 
 		private final CompletableFuture<?> closeFuture = new CompletableFuture<>();
@@ -113,14 +134,23 @@ public class GLFWAsyncWindow {
 		private final Queue<Entry> queue = new ConcurrentLinkedQueue<>();
 		private final FrameCounter frameCounter = new FrameCounter();
 		private final FrameLimiter frameLimiter = new FrameLimiter(60);
+		private Texture crossTexture;
 
 		public RenderThread() {
 			this.setName("GLFW-RenderThread");
 		}
 
 		private void updateViewport() {
-			int b = border.get();
-			GL11.glViewport(b, b, framebufferWidth.get(), framebufferHeight.get());
+			int w = framebufferWidth.get() + Math.round(border.get() * 2 * xscale.get());
+			int h = framebufferHeight.get() + Math.round((border.get() + borderTop.get()) * yscale.get());
+			updateViewport(w, h);
+		}
+
+		private void updateViewport(int w, int h) {
+			GL11.glViewport(0, 0, w, h);
+			GL11.glMatrixMode(GL11.GL_PROJECTION);
+			GL11.glLoadIdentity();
+			GL11.glOrtho(0, w, h, 0, 0, 1);
 		}
 
 		@Override
@@ -129,21 +159,51 @@ public class GLFWAsyncWindow {
 			long windowId = GLFWAsyncWindow.this.windowId.get();
 			glfwMakeContextCurrent(windowId);
 			GL.createCapabilities();
+
+			try {
+				crossTexture = new Texture(new ResourcePath("textures/window/cross.png"));
+				System.out.println(crossTexture);
+			} catch (IOException ex) {
+				ex.printStackTrace();
+			}
+
 			GL11.glLineWidth(5);
-			GL11.glClearColor(1, 0, 0, 0.3F);
+			GL11.glClearColor(0, 0, 0, 0.3F);
 			while (!shouldClose.get()) {
 				workQueue();
 				frameLimiter.limit();
 				GL11.glClear(GL11.GL_COLOR_BUFFER_BIT | GL11.GL_DEPTH_BUFFER_BIT);
-				GL11.glBegin(GL11.GL_LINES);
-				GL11.glVertex2f(0, 0);
-				GL11.glVertex2f(100, 100);
-				GL11.glEnd();
+				drawCross();
+				Renderer r = renderer.get();
+				if (r != null)
+					r.render();
 				frameCounter.nextFrame();
 				glfwSwapBuffers(windowId);
-				System.out.println(System.currentTimeMillis() % 1000 + "frame");
 			}
 			closeFuture.complete(null);
+		}
+
+		private void drawCross() {
+			float size = 32;
+			float le = border.get() * xscale.get() + framebufferWidth.get() - size;
+			float ri = le + size;
+			float to = border.get() * xscale.get();
+			float bo = to + size;
+			glEnable(GL_TEXTURE_2D);
+			GL11.glEnable(GL11.GL_ALPHA_TEST);
+			GL11.glAlphaFunc(GL11.GL_GREATER, .1F);
+			crossTexture.bind();
+			glBegin(GL_QUADS);
+			glVertex2f(le, to);
+			glTexCoord2f(0, 1);
+			glVertex2f(le, bo);
+			glTexCoord2f(0, 0);
+			glVertex2f(ri, bo);
+			glTexCoord2f(1, 0);
+			glVertex2f(ri, to);
+			glTexCoord2f(1, 1);
+			glEnd();
+			glDisable(GL_TEXTURE_2D);
 		}
 
 		public CompletableFuture<?> queue(Runnable runnable) {
@@ -199,6 +259,7 @@ public class GLFWAsyncWindow {
 		private final AtomicBoolean resize = new AtomicBoolean(false);
 
 		private final AtomicBoolean move = new AtomicBoolean(false);
+		private final AtomicBoolean movetop = new AtomicBoolean(false);
 		private long windowId;
 
 		public WindowThread() {
@@ -207,7 +268,8 @@ public class GLFWAsyncWindow {
 
 		private void updateFramebufferSize(int fbw, int fbh) {
 			framebufferWidth.set(fbw - Math.round((border.get() * 2) * xscale.get()));
-			framebufferHeight.set(fbh - Math.round((border.get() * 2) * yscale.get()));
+			framebufferHeight.set(fbh - Math.round((border.get() + borderTop.get()) * yscale.get()));
+			updateRenderer();
 		}
 
 		private void updateFramebufferSize() {
@@ -302,6 +364,7 @@ public class GLFWAsyncWindow {
 					int h = height.get();
 					int b = border.get();
 					boolean top = my < b;
+					boolean topmove = my < borderTop.get();
 					boolean bot = my > h - b;
 					boolean lef = mx < b;
 					boolean rig = mx > w - b;
@@ -312,49 +375,55 @@ public class GLFWAsyncWindow {
 						glfwSetWindowPos(window, newx, newy);
 						return;
 					} else if (resize.get()) {
+						int x = GLFWAsyncWindow.this.x.get();
+						int y = GLFWAsyncWindow.this.y.get();
 						if (resizeBot.get() && resizeRig.get()) {
-							glfwSetWindowSize(window, r(width.get() + mx - mousex.getAndSet(mx)),
-									r(height.get() + my - mousey.getAndSet(my)));
+							w = r(w + mx - mousex.getAndSet(mx));
+							h = r(h + my - mousey.getAndSet(my));
 						} else if (resizeTop.get() && resizeRig.get()) {
-							int ny = r(y.get() + my - mousey.get());
-							int nh = resizeBotY.get() - ny;
-							glfwSetWindowSize(window, r(width.get() + mx - mousex.getAndSet(mx)), nh);
-							glfwSetWindowPos(window, x.get(), ny);
+							y = r(y + my - mousey.get());
+							h = resizeBotY.get() - y;
+							w = r(w + mx - mousex.getAndSet(mx));
 						} else if (resizeTop.get() && resizeLef.get()) {
-							int nx = r(x.get() + mx - mousex.get());
-							int ny = r(y.get() + my - mousey.get());
-							int nw = resizeRigX.get() - nx;
-							int nh = resizeBotY.get() - ny;
-							glfwSetWindowSize(window, nw, nh);
-							glfwSetWindowPos(window, nx, ny);
+							x = r(x + mx - mousex.get());
+							y = r(y + my - mousey.get());
+							w = resizeRigX.get() - x;
+							h = resizeBotY.get() - y;
 						} else if (resizeBot.get() && resizeLef.get()) {
-							int nx = r(x.get() + mx - mousex.get());
-							int nw = resizeRigX.get() - nx;
-							glfwSetWindowSize(window, nw, r(height.get() + my - mousey.getAndSet(my)));
-							glfwSetWindowPos(window, nx, y.get());
+							x = r(x + mx - mousex.get());
+							w = resizeRigX.get() - x;
+							h = r(h + my - mousey.getAndSet(my));
 						} else if (resizeBot.get()) {
-							glfwSetWindowSize(window, width.get(), r(height.get() + my - mousey.getAndSet(my)));
+							h = r(h + my - mousey.getAndSet(my));
 						} else if (resizeRig.get()) {
-							glfwSetWindowSize(window, r(width.get() + mx - mousex.getAndSet(mx)), height.get());
+							w = r(w + mx - mousex.getAndSet(mx));
 						} else if (resizeLef.get()) {
-							int nx = r(x.get() + mx - mousex.get());
-							int nw = resizeRigX.get() - nx;
-							glfwSetWindowSize(window, nw, height.get());
-							glfwSetWindowPos(window, nx, y.get());
+							x = r(x + mx - mousex.get());
+							w = resizeRigX.get() - x;
 						} else if (resizeTop.get()) {
-							int ny = r(y.get() + my - mousey.get());
-							int nh = resizeBotY.get() - ny;
-							glfwSetWindowSize(window, width.get(), nh);
-							glfwSetWindowPos(window, x.get(), ny);
+							y = r(y + my - mousey.get());
+							h = resizeBotY.get() - y;
 						}
-						renderThread.queue(() -> {
-							renderThread.updateViewport();
-						});
+						int fw = w;
+						int fh = h;
+						try {
+							renderThread.queue(() -> {
+								renderThread.updateViewport(r(fw * xscale.get()), r(fh * yscale.get()));
+							}).get();
+						} catch (InterruptedException ex) {
+							ex.printStackTrace();
+						} catch (ExecutionException ex) {
+							ex.printStackTrace();
+						}
+						glfwSetWindowSize(window, w, h);
+						glfwSetWindowPos(window, x, y);
 						return;
 					} else {
 						mousex.set(mx);
 						mousey.set(my);
 					}
+
+					movetop.set(topmove);
 
 					resizeTop.set(top);
 					resizeBot.set(bot);
@@ -391,13 +460,15 @@ public class GLFWAsyncWindow {
 								GLFWAsyncWindow.WindowThread.this.resize.set(false);
 							}
 						}
-					} else {
+					} else if (movetop.get()) {
 						if (button == 0) {
 							if (action == GLFW_PRESS) {
 								move.set(true);
 							} else if (action == GLFW_RELEASE) {
 								move.set(false);
 							}
+						} else if (button == 1) {
+							shouldClose.set(true);
 						}
 					}
 				}

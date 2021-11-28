@@ -8,10 +8,11 @@ public class FrameLimiter {
 	private final int maxfps;
 	private final long oneFrameNanos;
 	private long lastFrameNanos = -1;
+	private final long second = TimeUnit.SECONDS.toNanos(1);
 
 	public FrameLimiter(int maxfps) {
 		this.maxfps = maxfps;
-		this.oneFrameNanos = TimeUnit.SECONDS.toNanos(1) / maxfps;
+		this.oneFrameNanos = second / maxfps;
 	}
 
 	public void limit() {
@@ -26,7 +27,9 @@ public class FrameLimiter {
 			sleep(sleepTime);
 		}
 		lastFrameNanos += oneFrameNanos;
-		
+		if (lastFrameNanos < currentNanos - second) {
+			lastFrameNanos = currentNanos;
+		}
 	}
 
 	private void sleep(long nanos) {

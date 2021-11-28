@@ -40,6 +40,9 @@ repositories {
 }
 
 dependencies {
+
+	implementation group: 'com.google.code.gson', name: 'gson', version: '2.7'
+
 	implementation platform("org.lwjgl:lwjgl-bom:$lwjglVersion")
 
 	implementation "org.lwjgl:lwjgl"
